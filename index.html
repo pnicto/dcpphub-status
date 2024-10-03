@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
+        />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
+            rel="stylesheet"
+        />
+        <title>BPHC DC Hub Status</title>
+        <style>
+            body {
+                font-family: "Roboto", sans-serif;
+                background-color: #f4f4f4;
+                color: #333;
+                margin: 0;
+                padding: 20px;
+            }
+
+            h1 {
+                text-align: center;
+                color: #2c3e50;
+                margin-bottom: 20px;
+            }
+
+            #container {
+                max-width: 800px;
+                margin: 0 auto;
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                text-align: center;
+            }
+
+            th,
+            td {
+                padding: 15px;
+                border-bottom: 1px solid #e0e0e0;
+            }
+
+            th {
+                background-color: #f9f9f9;
+            }
+
+            tr:hover {
+                background-color: #f1f1f1;
+            }
+
+            .status-up {
+                color: green;
+            }
+
+            .status-down {
+                color: red;
+            }
+
+            .copy-icon {
+                cursor: pointer;
+                margin-left: 10px;
+                color: #3498db;
+                transition: color 0.3s;
+                position: absolute;
+                right: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+            }
+
+            .copy-icon:hover {
+                color: #2980b9;
+            }
+
+            .error-message {
+                color: red;
+                margin: 20px 0;
+                text-align: center;
+            }
+
+            #loading {
+                text-align: center;
+                margin: 20px 0;
+            }
+
+            button {
+                margin: 20px auto;
+                padding: 10px 15px;
+                background-color: #3498db;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                display: inline-block;
+            }
+
+            button:hover {
+                background-color: #2980b9;
+            }
+
+            .hub-status {
+                max-width: 100px;
+                width: 100px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .hub-name {
+                max-width: 100px;
+                width: 100px;
+            }
+
+            .hub-address {
+                font-family: "Courier New", Courier, monospace;
+                border-radius: 4px;
+                border: 1px solid #e0e0e0;
+                position: relative;
+            }
+
+            @media (max-width: 600px) {
+                body {
+                    padding: 10px;
+                }
+                h1 {
+                    font-size: 1.5em;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <h1>BPHC DC++ Hubs</h1>
+        <div id="container" style="text-align: center">
+            <div
+                id="error-message"
+                class="error-message"
+                style="display: none"
+            ></div>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="hub-name">Hub Name</th>
+                        <th>Hub Address</th>
+                        <th class="hub-status">Status</th>
+                    </tr>
+                </thead>
+
+                <tbody id="hub-list"></tbody>
+            </table>
+            <div id="loading" style="display: none">
+                <p>Loading...</p>
+            </div>
+            <button id="refetch-button">Refresh</button>
+        </div>
+
+        <script>
+            document
+                .getElementById("refetch-button")
+                .addEventListener("click", () => {
+                    fetchHubs();
+                });
+
+            async function fetchHubs() {
+                hideErrorMessage();
+                const loadingIndicator = document.getElementById("loading");
+                loadingIndicator.style.display = "block";
+
+                try {
+                    const response = await fetch(
+                        "http://localhost:6969/status"
+                    );
+                    if (!response.ok)
+                        throw new Error("Network response was not ok");
+                    const hubs = await response.json();
+                    updateHubList(hubs);
+                } catch (error) {
+                    console.error("Error fetching hubs:", error);
+                    displayErrorMessage(
+                        "Failed to fetch hub status. Please try again later."
+                    );
+                } finally {
+                    loadingIndicator.style.display = "none";
+                }
+            }
+
+            function updateHubList(hubs) {
+                const hubList = document.querySelector("#hub-list");
+                hubList.innerHTML = "";
+                if (hubs.length === 0) return;
+
+                hubs.forEach((status) => {
+                    const statusText = status.status ? "UP" : "DOWN";
+                    const statusClass = status.status
+                        ? "status-up"
+                        : "status-down";
+                    const row = document.createElement("tr");
+                    row.classList.add(statusClass);
+                    row.innerHTML = `
+                <td>${status.name}</td>
+                <td class="hub-address">
+                    ${status.address}
+                    <i class="fas fa-copy copy-icon" title="Copy address" onclick="copyToClipboard('${status.address}')"></i>
+                </td>
+                <td>${statusText}</td>
+            `;
+                    hubList.appendChild(row);
+                });
+            }
+
+            function hideErrorMessage() {
+                const errorMessage = document.getElementById("error-message");
+                errorMessage.style.display = "none";
+            }
+
+            function displayErrorMessage(message) {
+                const errorMessage = document.getElementById("error-message");
+                errorMessage.textContent = message;
+                errorMessage.style.display = "block";
+            }
+
+            function copyToClipboard(address) {
+                navigator.clipboard.writeText(address).then(() => {
+                    alert("Address copied to clipboard!");
+                });
+            }
+
+            fetchHubs();
+        </script>
+    </body>
+</html>
